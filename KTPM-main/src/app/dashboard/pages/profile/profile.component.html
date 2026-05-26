@@ -1,0 +1,566 @@
+<div class="profile-page" *ngIf="!isLoading">
+
+  <!-- ====== ERROR ALERT ====== -->
+  <div class="alert alert-danger" *ngIf="error">
+    <i class="fas fa-exclamation-circle"></i> {{ error }}
+    <button (click)="error = null" class="close-btn"><i class="fas fa-times"></i></button>
+  </div>
+
+  <!-- ====== COVER PHOTO SECTION ====== -->
+  <div class="cover-section">
+    <div class="cover-photo-wrapper">
+      <img *ngIf="profile?.coverImage" [src]="getCoverImageUrl(profile?._id)" alt="Cover Photo" class="cover-img">
+      <div *ngIf="!profile?.coverImage" class="cover-placeholder">
+        <i class="fas fa-image"></i>
+      </div>
+      <div class="cover-overlay">
+        <label class="cover-upload-btn" *ngIf="!isEditing">
+          <i class="fas fa-camera"></i>
+          <span>Thêm ảnh bìa</span>
+          <input type="file" accept="image/*" (change)="onCoverImageSelected($event)" style="display:none;">
+        </label>
+        <button class="cover-remove-btn" *ngIf="profile?.coverImage && !isEditing" (click)="removeCoverImage()">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Avatar -->
+    <div class="avatar-wrapper">
+      <div class="avatar-ring">
+        <img *ngIf="profile?.avatar" [src]="getAvatarUrl(profile?._id)" alt="Profile Photo" class="avatar-img">
+        <div *ngIf="!profile?.avatar" class="avatar-placeholder">
+          <i class="fas fa-user"></i>
+        </div>
+        <label class="avatar-upload-overlay" *ngIf="!isEditing">
+          <i class="fas fa-camera"></i>
+          <input type="file" accept="image/*" (change)="onAvatarSelected($event)" style="display:none;">
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== PROFILE INFO BAR ====== -->
+  <div class="profile-info-bar">
+    <div class="profile-name-section">
+      <h1 class="profile-display-name">{{ profile?.firstName }} {{ profile?.lastName }}</h1>
+      <div class="profile-meta-row">
+        <span class="followers-count"><i class="fas fa-users"></i> {{ followersCount }} người theo dõi</span>
+        <span class="dot-sep">·</span>
+        <span class="following-count">{{ followingCount }} đang theo dõi</span>
+      </div>
+      <p class="profile-quote" *ngIf="profile?.bio">{{ profile.bio }}</p>
+    </div>
+
+    <div class="profile-actions">
+      <button class="btn-action primary" (click)="openCreatePostModal()">
+        <i class="fas fa-plus"></i> Tạo bài viết
+      </button>
+      <button class="btn-action secondary" (click)="toggleEditMode()" *ngIf="!isEditing">
+        <i class="fas fa-edit"></i> Chỉnh sửa trang cá nhân
+      </button>
+      <button class="btn-action secondary" (click)="toggleEditMode()" *ngIf="isEditing">
+        <i class="fas fa-times"></i> Hủy
+      </button>
+    </div>
+  </div>
+
+  <!-- ====== NAVIGATION TABS ====== -->
+  <div class="profile-tabs" *ngIf="!isEditing">
+    <div class="tabs-scroll">
+      <button class="tab-btn" [class.active]="activeTab === 'posts'" (click)="setActiveTab('posts')">
+        <i class="fas fa-newspaper"></i> Bài viết
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'intro'" (click)="setActiveTab('intro')">
+        <i class="fas fa-info-circle"></i> Giới thiệu
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'friends'" (click)="setActiveTab('friends')">
+        <i class="fas fa-user-friends"></i> Bạn bè
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'photos'" (click)="setActiveTab('photos')">
+        <i class="fas fa-image"></i> Ảnh
+      </button>
+      <button class="tab-btn" [class.active]="activeTab === 'videos'" (click)="setActiveTab('videos')">
+        <i class="fas fa-video"></i> Video
+      </button>
+      <button class="tab-btn more-btn" (click)="showMoreTabs = !showMoreTabs">
+        <i class="fas fa-ellipsis-h"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- ====== MAIN CONTENT (2-column) ====== -->
+  <div class="profile-main-grid" *ngIf="!isEditing">
+
+    <!-- ====== LEFT COLUMN ====== -->
+    <div class="profile-left-col">
+
+      <!-- Intro Card -->
+      <div class="card intro-card">
+        <div class="card-header">
+          <i class="fas fa-info-circle"></i>
+          <h3>Giới thiệu</h3>
+        </div>
+        <div class="intro-items">
+          <div class="intro-item" *ngIf="profile?.location">
+            <i class="fas fa-map-marker-alt"></i>
+            <span>{{ profile.location }}</span>
+          </div>
+          <div class="intro-item" *ngIf="profile?.website">
+            <i class="fas fa-link"></i>
+            <a [href]="profile.website" target="_blank">{{ profile.website }}</a>
+          </div>
+          <div class="intro-item" *ngIf="profile?.phoneNumber">
+            <i class="fas fa-phone"></i>
+            <span>{{ profile.phoneNumber }}</span>
+          </div>
+          <div class="intro-item" *ngIf="profile?.email">
+            <i class="fas fa-envelope"></i>
+            <span>{{ profile.email }}</span>
+          </div>
+          <div class="intro-item" *ngIf="profile?.interests && profile.interests.length > 0">
+            <i class="fas fa-heart"></i>
+            <div class="interests-wrap">
+              <span *ngFor="let interest of profile.interests" class="interest-tag">{{ interest }}</span>
+            </div>
+          </div>
+          <div class="intro-item quote-item" *ngIf="profile?.bio">
+            <i class="fas fa-quote-left"></i>
+            <span class="quote-text">{{ profile.bio }}</span>
+          </div>
+          <div class="intro-empty" *ngIf="!profile?.location && !profile?.bio && !profile?.website && !profile?.phoneNumber">
+            <p>Chưa có thông tin giới thiệu</p>
+          </div>
+        </div>
+        <button class="btn-edit-intro" (click)="toggleEditMode()">
+          <i class="fas fa-edit"></i> Chỉnh sửa chi tiết
+        </button>
+      </div>
+
+      <!-- Photos Card -->
+      <div class="card photos-card">
+        <div class="card-header">
+          <i class="fas fa-image"></i>
+          <h3>Ảnh</h3>
+          <span class="count-badge" *ngIf="photoCount > 0">{{ photoCount }}</span>
+        </div>
+        <div class="photos-grid" *ngIf="allPhotos.length > 0">
+          <img *ngFor="let photo of allPhotos.slice(0, 9)" [src]="photo" alt="Photo" class="photo-thumb">
+        </div>
+        <div class="photos-empty" *ngIf="allPhotos.length === 0">
+          <p>Chưa có ảnh nào</p>
+        </div>
+      </div>
+
+      <!-- Friends Card -->
+      <div class="card friends-card">
+        <div class="card-header">
+          <i class="fas fa-user-friends"></i>
+          <h3>Bạn bè</h3>
+          <span class="count-badge">{{ friendsCount }}</span>
+        </div>
+        <div class="friends-empty" *ngIf="friendsCount === 0">
+          <p>Chưa có bạn bè</p>
+        </div>
+        <button class="btn-see-all" (click)="setActiveTab('friends')">Xem tất cả bạn bè</button>
+      </div>
+
+    </div>
+
+    <!-- ====== RIGHT COLUMN ====== -->
+    <div class="profile-right-col">
+
+      <!-- Create Post Card -->
+      <div class="card create-post-card">
+        <div class="create-post-input-row">
+          <img [src]="getAvatarUrl(currentUserId)" alt="Your Avatar" class="cp-avatar">
+          <div class="cp-input" (click)="openCreatePostModal()">
+            Bạn đang nghĩ gì, {{ profile?.firstName }}?
+          </div>
+        </div>
+        <div class="create-post-options">
+          <button class="cp-option" (click)="openCreatePostModal()">
+            <i class="fas fa-video" style="color:#e41e3f"></i>
+            <span>Video trực tiếp</span>
+          </button>
+          <button class="cp-option" (click)="openCreatePostModal()">
+            <i class="fas fa-image" style="color:#20b038"></i>
+            <span>Ảnh/Video</span>
+          </button>
+          <button class="cp-option" (click)="openCreatePostModal()">
+            <i class="fas fa-smile" style="color:#f7b928"></i>
+            <span>Cảm xúc/Hoạt động</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Post Filter Bar -->
+      <div class="post-filter-bar" *ngIf="posts.length > 0">
+        <div class="filter-left">
+          <span class="filter-label">Bài viết</span>
+          <button class="filter-btn" (click)="togglePostFilter()">
+            <i class="fas fa-sliders-h"></i> Bộ lọc
+          </button>
+        </div>
+        <div class="filter-options" *ngIf="showPostFilter">
+          <button class="filter-opt" [class.active]="postFilter === 'all'" (click)="setPostFilter('all')">Tất cả bài viết</button>
+          <button class="filter-opt" [class.active]="postFilter === 'public'" (click)="setPostFilter('public')">Công khai</button>
+          <button class="filter-opt" [class.active]="postFilter === 'friends'" (click)="setPostFilter('friends')">Bạn bè</button>
+          <button class="filter-opt" [class.active]="postFilter === 'private'" (click)="setPostFilter('private')">Chỉ mình tôi</button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div *ngIf="postsLoading && currentPage === 1" class="posts-loading">
+        <div class="spinner"></div>
+        <p>Đang tải bài viết...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div *ngIf="!postsLoading && !postsError && filteredPosts.length === 0" class="posts-empty">
+        <div class="empty-illustration">
+          <i class="fas fa-pen-nib"></i>
+        </div>
+        <p class="empty-title">Chưa có bài viết nào</p>
+        <p class="empty-subtitle">Hãy bắt đầu chia sẻ những khoảnh khắc đầu tiên!</p>
+      </div>
+
+      <!-- Posts List -->
+      <div *ngIf="filteredPosts.length > 0" class="posts-list">
+        <div *ngFor="let post of filteredPosts" class="post-card">
+          <!-- Post Header -->
+          <div class="post-header">
+            <img [src]="getAvatarUrl(post.user?._id)" alt="User Avatar" class="post-avatar"
+                 (click)="navigateToProfile(post.user?._id)">
+            <div class="post-info">
+              <h4 class="post-author" (click)="navigateToProfile(post.user?._id)">
+                {{ post.user?.firstName }} {{ post.user?.lastName }}
+              </h4>
+              <div class="post-meta">
+                <span class="post-time">{{ formatTimeAgo(post.createdAt) }}</span>
+                <span class="meta-dot">·</span>
+                <span class="post-privacy">
+                  <i class="fa {{ getPrivacyIcon(post.privacy) }}"></i>
+                </span>
+                <span *ngIf="post.emotion && post.emotion !== 'none'" class="post-emotion">
+                  {{ getEmotionEmoji(post.emotion) }}
+                </span>
+              </div>
+            </div>
+            <!-- Three dots menu -->
+            <div class="post-menu" *ngIf="isCurrentUserPost(post)">
+              <div class="dropdown">
+                <button class="dropdown-toggle" (click)="togglePostMenu($event, post._id)">
+                  <i class="fas fa-ellipsis-h"></i>
+                </button>
+                <div class="dropdown-menu" [class.show]="activePostMenu === post._id">
+                  <button class="dropdown-item" (click)="editPost(post)">
+                    <i class="fas fa-edit"></i> Chỉnh sửa bài viết
+                  </button>
+                  <button class="dropdown-item delete" (click)="confirmDeletePost(post._id)">
+                    <i class="fas fa-trash"></i> Xóa bài viết
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Post Content -->
+          <div class="post-content">
+            <p class="post-text">{{ post.content }}</p>
+
+            <!-- Post Images -->
+            <div *ngIf="post.imageUrls && post.imageUrls.length > 0"
+                 class="post-images"
+                 [class.single]="post.imageUrls.length === 1"
+                 [class.two]="post.imageUrls.length === 2"
+                 [class.three]="post.imageUrls.length === 3"
+                 [class.four-plus]="post.imageUrls.length >= 4">
+              <div *ngFor="let imageUrl of post.imageUrls; let i = index">
+                <img [src]="imageUrl" alt="Post Image" class="post-image"
+                     [class.extra]="i >= 3 && post.imageUrls.length > 4">
+                <div *ngIf="i === 3 && post.imageUrls.length > 4" class="more-overlay-content">
+                  +{{ post.imageUrls.length - 4 }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Post Videos -->
+            <div *ngIf="post.videoUrls && post.videoUrls.length > 0" class="post-videos">
+              <video *ngFor="let videoUrl of post.videoUrls" [src]="videoUrl" controls class="post-video"></video>
+            </div>
+
+            <!-- Hashtags -->
+            <div *ngIf="post.hashtags && post.hashtags.length > 0" class="post-hashtags">
+              <span *ngFor="let tag of post.hashtags" class="hashtag">#{{ tag }}</span>
+            </div>
+          </div>
+
+          <!-- Post Stats -->
+          <div class="post-stats">
+            <div class="likes-count">
+              <i class="fas fa-thumbs-up"></i> {{ post.likes?.length || 0 }} lượt thích
+            </div>
+            <div class="comments-count">
+              <i class="fas fa-comment"></i> {{ post.comments?.length || 0 }} bình luận
+            </div>
+          </div>
+
+          <!-- Post Actions -->
+          <div class="post-actions">
+            <button class="action-btn" [class.liked]="isLiked(post)" (click)="toggleLike(post)">
+              <i class="fa" [class.fa-thumbs-o-up]="!isLiked(post)" [class.fa-thumbs-up]="isLiked(post)"></i>
+              Thích
+            </button>
+            <button class="action-btn" (click)="toggleComments(post)">
+              <i class="fa fa-comment-o"></i> Bình luận
+            </button>
+            <button class="action-btn">
+              <i class="fa fa-share"></i> Chia sẻ
+            </button>
+          </div>
+
+          <!-- Comments Section -->
+          <div *ngIf="post.showComments" class="comments-section">
+            <div class="comments-list">
+              <div *ngFor="let comment of post.comments" class="comment">
+                <img [src]="getAvatarUrl(comment.user._id)" alt="Commenter" class="comment-avatar"
+                     (click)="navigateToProfile(comment.user._id)">
+                <div class="comment-bubble">
+                  <span class="commenter-name" (click)="navigateToProfile(comment.user._id)">
+                    {{ comment.user.firstName }} {{ comment.user.lastName }}
+                  </span>
+                  <p class="comment-text">{{ comment.text }}</p>
+                  <span class="comment-time">{{ formatTimeAgo(comment.createdAt) }}</span>
+                </div>
+              </div>
+            </div>
+            <!-- Add Comment -->
+            <div class="add-comment">
+              <img [src]="getAvatarUrl(currentUserId)" alt="Your Avatar" class="add-comment-avatar">
+              <div class="comment-input-wrap">
+                <input type="text" [(ngModel)]="commentInputs[post._id]"
+                       placeholder="Viết bình luận..." class="comment-input"
+                       (keyup.enter)="addComment(post, commentInputs[post._id])">
+                <button class="comment-send-btn" (click)="addComment(post, commentInputs[post._id])">
+                  <i class="fas fa-paper-plane"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Load More -->
+      <div *ngIf="filteredPosts.length > 0 && currentPage < totalPages" class="load-more">
+        <button class="btn-load-more" (click)="loadMorePosts()" [disabled]="postsLoading">
+          <span *ngIf="postsLoading" class="spinner-small"></span>
+          <span *ngIf="!postsLoading">Xem thêm bài viết</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ====== EDIT MODE ====== -->
+  <div class="profile-edit-mode" *ngIf="isEditing">
+    <div class="edit-card">
+      <div class="edit-card-header">
+        <h3><i class="fas fa-user-edit"></i> Chỉnh sửa trang cá nhân</h3>
+        <button class="btn-close-edit" (click)="toggleEditMode()"><i class="fas fa-times"></i></button>
+      </div>
+      <form [formGroup]="profileForm" (ngSubmit)="saveProfile()">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tên</label>
+            <input type="text" formControlName="firstName" class="form-control"
+                   [ngClass]="{'is-invalid': profileForm.get('firstName')?.invalid && profileForm.get('firstName')?.touched}">
+            <small class="invalid-msg" *ngIf="profileForm.get('firstName')?.errors?.['required'] && profileForm.get('firstName')?.touched">Tên là bắt buộc</small>
+          </div>
+          <div class="form-group">
+            <label>Họ</label>
+            <input type="text" formControlName="lastName" class="form-control"
+                   [ngClass]="{'is-invalid': profileForm.get('lastName')?.invalid && profileForm.get('lastName')?.touched}">
+            <small class="invalid-msg" *ngIf="profileForm.get('lastName')?.errors?.['required'] && profileForm.get('lastName')?.touched">Họ là bắt buộc</small>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Giới thiệu</label>
+          <textarea formControlName="bio" class="form-control" rows="3" placeholder="Chia sẻ điều gì đó về bản thân..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>Vị trí</label>
+          <input type="text" formControlName="location" class="form-control" placeholder="Thành phố, quốc gia...">
+        </div>
+        <div class="form-group">
+          <label>Website</label>
+          <input type="text" formControlName="website" class="form-control" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>Số điện thoại</label>
+          <input type="text" formControlName="phoneNumber" class="form-control" placeholder="Số điện thoại...">
+        </div>
+        <div class="form-group">
+          <label>Sở thích (phân cách bằng dấu phẩy)</label>
+          <input type="text" formControlName="interests" class="form-control" placeholder="Âm nhạc, Du lịch,...">
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-save" [disabled]="profileForm.invalid">
+            <i class="fas fa-save"></i> Lưu thay đổi
+          </button>
+          <button type="button" class="btn-cancel" (click)="toggleEditMode()">Hủy</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<!-- ====== LOADING STATE ====== -->
+<div class="loading-spinner" *ngIf="isLoading">
+  <div class="spinner-ring"></div>
+  <p>Đang tải trang cá nhân...</p>
+</div>
+
+<!-- ====== CREATE POST MODAL ====== -->
+<div class="modal" [class.show]="showCreatePostModal" *ngIf="showCreatePostModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5>Tạo bài viết</h5>
+        <button class="close" (click)="closeCreatePostModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-user-row">
+          <img [src]="getAvatarUrl(currentUserId)" alt="Avatar" class="modal-avatar">
+          <div>
+            <span class="modal-user-name">{{ profile?.firstName }} {{ profile?.lastName }}</span>
+            <select class="privacy-select" [(ngModel)]="newPostPrivacy">
+              <option value="public"><i class="fas fa-globe"></i> Công khai</option>
+              <option value="friends"><i class="fas fa-user-friends"></i> Bạn bè</option>
+              <option value="private"><i class="fas fa-lock"></i> Chỉ mình tôi</option>
+            </select>
+          </div>
+        </div>
+        <textarea class="post-textarea" [(ngModel)]="newPostContent"
+                  placeholder="Bạn đang nghĩ gì?" rows="4"></textarea>
+        <div class="media-preview-modal" *ngIf="newPostMedias.length > 0">
+          <div *ngFor="let media of newPostMedias; let i = index" class="modal-media-item">
+            <img *ngIf="media.type === 'image'" [src]="media.url" alt="Preview">
+            <video *ngIf="media.type === 'video'" [src]="media.url" controls></video>
+            <button class="remove-media-btn" (click)="removeNewPostMedia(i)"><i class="fas fa-times"></i></button>
+          </div>
+        </div>
+        <div class="modal-post-tools">
+          <label class="tool-btn" for="modal-media-input">
+            <i class="fas fa-image" style="color:#20b038"></i> Ảnh/Video
+          </label>
+          <input type="file" id="modal-media-input" multiple accept="image/*,video/*"
+                 (change)="onNewPostMediaSelected($event)" style="display:none;">
+          <select class="emotion-select" [(ngModel)]="newPostEmotion">
+            <option value="none">Không có cảm xúc</option>
+            <option value="happy">😊 Vui vẻ</option>
+            <option value="sad">😢 Buồn</option>
+            <option value="excited">🤩 Phấn khích</option>
+            <option value="loved">❤️ Yêu thích</option>
+            <option value="angry">😠 Tức giận</option>
+          </select>
+        </div>
+        <button class="btn-post" [disabled]="!newPostContent.trim()" (click)="submitNewPost()">
+          Đăng
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== EDIT POST MODAL ====== -->
+<div class="modal" [class.show]="isEditingPost" *ngIf="postToEdit">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5>Chỉnh sửa bài viết</h5>
+        <button class="close" (click)="cancelEditPost()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="editPostForm" (ngSubmit)="updatePost()">
+          <div class="form-group">
+            <label>Nội dung</label>
+            <textarea formControlName="content" class="form-control" rows="4"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Cảm xúc</label>
+              <select formControlName="emotion" class="form-control">
+                <option value="none">Không có</option>
+                <option value="happy">😊 Vui vẻ</option>
+                <option value="sad">😢 Buồn</option>
+                <option value="angry">😠 Tức giận</option>
+                <option value="excited">🤩 Phấn khích</option>
+                <option value="surprised">😲 Ngạc nhiên</option>
+                <option value="loved">❤️ Yêu thích</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Quyền riêng tư</label>
+              <select formControlName="privacy" class="form-control">
+                <option value="public">Công khai</option>
+                <option value="friends">Chỉ bạn bè</option>
+                <option value="private">Chỉ mình tôi</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Hashtags (phân cách bằng dấu phẩy)</label>
+            <input type="text" formControlName="hashtags" class="form-control" placeholder="hashtag1, hashtag2">
+          </div>
+          <div class="form-group">
+            <label>Thêm ảnh/video mới</label>
+            <label for="edit-modal-media" class="btn-add-media">
+              <i class="fas fa-plus"></i> Chọn ảnh/video
+            </label>
+            <input type="file" id="edit-modal-media" multiple accept="image/*,video/*"
+                   (change)="onEditFileChange($event)" style="display:none;">
+          </div>
+          <div class="media-preview" *ngIf="editPreviewImages.length > 0">
+            <div *ngFor="let preview of editPreviewImages; let i = index" class="preview-item">
+              <img [src]="preview" alt="Preview">
+              <button type="button" class="remove-preview" (click)="removeEditFile(i)"><i class="fas fa-times"></i></button>
+            </div>
+          </div>
+          <div class="existing-media" *ngIf="postToEdit?.imageUrls && postToEdit.imageUrls.length > 0">
+            <label>Ảnh hiện tại</label>
+            <div class="media-preview">
+              <div *ngFor="let image of postToEdit.imageUrls" class="preview-item">
+                <img [src]="image" alt="Existing">
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn-cancel" (click)="cancelEditPost()">Hủy</button>
+            <button type="submit" class="btn-save" [disabled]="editPostForm.invalid">Lưu</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====== DELETE CONFIRM MODAL ====== -->
+<div class="modal" [class.show]="isDeletingPost">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5>Xác nhận xóa</h5>
+        <button class="close" (click)="cancelDeletePost()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p>Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" (click)="cancelDeletePost()">Hủy</button>
+        <button class="btn-delete" (click)="deletePost()"><i class="fas fa-trash"></i> Xóa</button>
+      </div>
+    </div>
+  </div>
+</div>

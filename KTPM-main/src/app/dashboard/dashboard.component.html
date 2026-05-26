@@ -1,0 +1,251 @@
+<div class="dashboard-container" (click)="closeSearchResults()">
+  <!-- Left Sidebar -->
+  <div class="left-sidebar">
+    <div class="sidebar-content">
+      <a routerLink="/dashboard/profile" class="user-profile-link">
+        <img [src]="getCurrentUserAvatar()" alt="Avatar" class="user-avatar">
+        <span>{{ user?.firstName }} {{ user?.lastName }}</span>
+      </a>
+      <a routerLink="/dashboard/home" class="sidebar-link">
+        <i class="fa fa-newspaper-o"></i>
+        <span>Feed</span>
+      </a>
+      <a routerLink="/dashboard/friends" class="sidebar-link">
+        <i class="fa fa-user-friends"></i>
+        <span>Bạn bè</span>
+      </a>
+      <a routerLink="/dashboard/messages" class="sidebar-link">
+        <i class="fa fa-comments"></i>
+        <span>Tin nhắn</span>
+        <span class="badge" *ngIf="unreadMessageCount > 0">{{ unreadMessageCount }}</span>
+      </a>
+      <a routerLink="/dashboard/fundraising" class="sidebar-link">
+        <i class="fa fa-heart"></i>
+        <span>Gây quỹ</span>
+      </a>
+      <a routerLink="/dashboard/aley-ask" class="sidebar-link">
+        <i class="fa fa-comment-dots"></i>
+        <span>Aley Ask</span>
+      </a>
+      
+      <div class="sidebar-divider"></div>
+      
+      <h4 class="sidebar-heading">Khám phá</h4>
+      <a routerLink="/dashboard/search" class="sidebar-link">
+        <i class="fa fa-search"></i>
+        <span>Tìm kiếm</span>
+      </a>
+      <a routerLink="/dashboard/settings" class="sidebar-link">
+        <i class="fa fa-cog"></i>
+        <span>Cài đặt</span>
+      </a>
+      <a routerLink="/dashboard/help-center" class="sidebar-link">
+        <i class="fa fa-question-circle"></i>
+        <span>Trợ giúp</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <header class="main-header">
+      <div class="header-left">
+        <a routerLink="/dashboard/home" class="header-logo">
+          <img src="assets/images/logo.png" alt="Aley" class="header-logo-img">
+        </a>
+        <div class="search-box" (click)="$event.stopPropagation()">
+          <i class="fa fa-search"></i>
+          <input 
+            type="text" 
+            placeholder="Tìm kiếm trên Aley"
+            [(ngModel)]="searchQuery"
+            (input)="onSearch()"
+            (focus)="showSearchResults = searchQuery.length > 0"
+          >
+          <button *ngIf="searchQuery" class="clear-search" (click)="clearSearch()">
+            <i class="fa fa-times"></i>
+          </button>
+        </div>
+        
+        <!-- Search Results Dropdown -->
+        <div class="search-results-dropdown" *ngIf="showSearchResults" (click)="$event.stopPropagation()">
+          <div *ngIf="isSearching" class="search-loading">
+            <div class="spinner-small"></div>
+            <span>Đang tìm kiếm...</span>
+          </div>
+          
+          <div *ngIf="!isSearching">
+            <!-- Users Results -->
+            <div *ngIf="searchResults.users && searchResults.users.length > 0" class="search-section">
+              <h4 class="search-section-title">Người dùng</h4>
+              <div *ngFor="let user of searchResults.users" class="search-result-item" (click)="navigateToUser(user._id)">
+                <img [src]="user.avatarUrl || 'assets/images/default-avatar.png'" alt="Avatar" class="result-avatar">
+                <div class="result-info">
+                  <span class="result-name">{{ user.firstName }} {{ user.lastName }}</span>
+                  <span class="result-meta">{{ user.email }}</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Posts Results -->
+            <div *ngIf="searchResults.posts && searchResults.posts.length > 0" class="search-section">
+              <h4 class="search-section-title">Bài viết</h4>
+              <div *ngFor="let post of searchResults.posts" class="search-result-item post-result" (click)="navigateToPost(post._id)">
+                <div class="result-content">
+                  <span class="result-name">{{ post.user?.firstName }} {{ post.user?.lastName }}</span>
+                  <p class="result-preview">{{ post.content | slice:0:100 }}{{ post.content?.length > 100 ? '...' : '' }}</p>
+                </div>
+              </div>
+            </div>
+            
+            <!-- No Results -->
+            <div *ngIf="(searchResults.users?.length === 0 || !searchResults.users) && (searchResults.posts?.length === 0 || !searchResults.posts)" class="no-results">
+              <i class="fa fa-search"></i>
+              <p>Không tìm thấy kết quả cho "{{ searchQuery }}"</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="user-section" *ngIf="user">
+        <div class="connection-status" [class.connected]="isSocketConnected" [class.disconnected]="!isSocketConnected">
+          <span class="status-dot"></span>
+          <span class="status-text">{{ isSocketConnected ? 'Trực tuyến' : 'Ngoại tuyến' }}</span>
+          <button *ngIf="!isSocketConnected" class="reconnect-btn" (click)="reconnectSocket()" title="Kết nối lại">
+            <i class="fa fa-refresh"></i>
+          </button>
+        </div>
+        
+        <div class="notifications" (click)="toggleNotificationsPanel()">
+          <i class="fa fa-bell"></i>
+          <span class="notification-badge" *ngIf="unreadNotificationCount > 0">{{ unreadNotificationCount }}</span>
+        </div>
+        <span class="user-name">{{ user.firstName }} {{ user.lastName }}</span>
+        <button class="btn-logout" (click)="logout()">Logout</button>
+      </div>
+      
+      <!-- Notifications Panel -->
+      <div class="notifications-panel" *ngIf="showNotificationsPanel" (click)="$event.stopPropagation()">
+        <div class="panel-header">
+          <h3>Thông báo</h3>
+          <div class="panel-actions">
+            <button class="refresh-btn" (click)="refreshNotifications()" [disabled]="isNotificationsLoading" title="Làm mới">
+              <i class="fa fa-refresh" [class.fa-spin]="isNotificationsLoading"></i>
+            </button>
+            <button class="mark-all-read-btn" (click)="markAllAsRead()" *ngIf="unreadNotificationCount > 0" [disabled]="isNotificationsLoading">
+              Đánh dấu tất cả đã đọc
+            </button>
+          </div>
+        </div>
+        
+        <!-- Loading indicator -->
+        <div class="notifications-loading" *ngIf="isNotificationsLoading">
+          <div class="spinner-small"></div>
+          <p>Đang tải thông báo...</p>
+        </div>
+        
+        <div class="notifications-list" *ngIf="!isNotificationsLoading && notifications.length > 0">
+          <div 
+            *ngFor="let notification of notifications" 
+            class="notification-item"
+            [class.unread]="!notification.read"
+            (click)="navigateFromNotification(notification)"
+          >
+            <img [src]="notification.sender.avatarUrl || 'assets/images/default-avatar.png'" alt="Avatar" class="notification-avatar">
+            <div class="notification-content">
+              <p class="notification-text">{{ getNotificationText(notification) }}</p>
+              <span class="notification-time">{{ getNotificationTime(notification.createdAt) }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Connection error message -->
+        <div class="connection-error" *ngIf="!isSocketConnected && !isNotificationsLoading">
+          <i class="fa fa-exclamation-triangle"></i>
+          <p>Kết nối thời gian thực bị gián đoạn</p>
+          <button class="btn-reconnect" (click)="reconnectSocket()">Kết nối lại</button>
+        </div>
+        
+        <div class="empty-notifications" *ngIf="!isNotificationsLoading && notifications.length === 0">
+          <i class="fa fa-bell-o"></i>
+          <p>Không có thông báo nào</p>
+        </div>
+      </div>
+    </header>
+    
+    <div class="content-area">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+
+  <!-- Right Sidebar -->
+  <div class="right-sidebar">
+    <div class="sidebar-content">
+      <h4 class="sidebar-heading">Người liên hệ</h4>
+
+      <!-- Loading state -->
+      <div *ngIf="isLoadingFriends" class="contacts-loading">
+        <div class="spinner-small"></div>
+      </div>
+
+      <!-- Friends list -->
+      <div class="contact-list" *ngIf="!isLoadingFriends && friends.length > 0">
+        <div
+          *ngFor="let friend of friends"
+          class="contact-item"
+          (click)="navigateToUserProfile(friend._id)"
+          title="{{ friend.firstName }} {{ friend.lastName }}"
+        >
+          <div class="contact-avatar">
+            <img [src]="getFriendAvatarUrl(friend.avatarUrl)" alt="Avatar">
+            <span class="online-indicator"></span>
+          </div>
+          <span class="contact-name">{{ friend.firstName }} {{ friend.lastName }}</span>
+        </div>
+      </div>
+
+      <!-- Empty state -->
+      <div *ngIf="!isLoadingFriends && friends.length === 0" class="contacts-empty">
+        <i class="fa fa-user-friends"></i>
+        <p>Chưa có bạn bè nào</p>
+        <a routerLink="/dashboard/friends" class="find-friends-link">Tìm bạn bè</a>
+      </div>
+      
+      <div class="sidebar-divider"></div>
+      
+      <h4 class="sidebar-heading">Cuộc trò chuyện nhóm</h4>
+      <div class="group-chats">
+        <a routerLink="/dashboard/messages" class="contact-item">
+          <div class="contact-avatar group-avatar">
+            <i class="fa fa-users"></i>
+          </div>
+          <span>Nhóm bạn bè</span>
+        </a>
+        <a routerLink="/dashboard/messages" class="contact-item">
+          <div class="contact-avatar group-avatar">
+            <i class="fa fa-users"></i>
+          </div>
+          <span>Công việc</span>
+        </a>
+      </div>
+      
+      <div class="sidebar-divider"></div>
+      
+      <h4 class="sidebar-heading">Liên kết nhanh</h4>
+      <div class="quick-links">
+        <a routerLink="/dashboard/fundraising" class="quick-link">
+          <i class="fa fa-heart"></i>
+          <span>Gây quỹ cộng đồng</span>
+        </a>
+        <a routerLink="/dashboard/aley-ask" class="quick-link">
+          <i class="fa fa-question-circle"></i>
+          <span>Hỏi đáp Aley</span>
+        </a>
+        <a routerLink="/dashboard/help-center" class="quick-link">
+          <i class="fa fa-info-circle"></i>
+          <span>Trung tâm trợ giúp</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,692 @@
+<div class="home-container">
+  <!-- Live Streams Section -->
+  <div class="live-section" *ngIf="liveStreams.length > 0">
+    <div class="live-header">
+      <div class="live-title-row">
+        <i class="fa fa-circle live-dot"></i>
+        <h3>Live</h3>
+      </div>
+    </div>
+    <div class="live-grid">
+      <div class="live-card" *ngFor="let stream of liveStreams" (click)="openStreamViewer(stream)">
+        <div class="live-thumbnail">
+          <img [src]="stream.thumbnailUrl || 'assets/images/video-placeholder.jpg'" alt="Live">
+          <div class="live-overlay">
+            <div class="live-viewer-count">
+              <i class="fa fa-eye"></i>
+              <span>{{ stream.viewerCount }}</span>
+            </div>
+            <div class="live-badge">LIVE</div>
+          </div>
+        </div>
+        <div class="live-info">
+          <img [src]="stream.broadcaster?.avatarUrl || getAvatarUrl(stream.broadcaster?._id)" alt="Avatar" class="live-avatar">
+          <div class="live-details">
+            <span class="live-stream-title">{{ stream.title }}</span>
+            <span class="live-user-name">{{ stream.broadcaster?.firstName }} {{ stream.broadcaster?.lastName }}</span>
+            <span class="live-time">{{ getStreamTimeAgo(stream.startedAt) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stories Section -->
+  <div class="stories-section">
+    <div class="stories-header">
+      <h3>Tin</h3>
+      <button class="create-story-btn" (click)="openStoryModal()">
+        <i class="fa fa-plus"></i>
+        Tạo tin
+      </button>
+    </div>
+    <div class="stories-grid">
+      <div class="story-item add-story" (click)="openStoryModal()">
+        <div class="add-story-border">
+          <img [src]="getAvatarUrl(currentUser?._id)" alt="Your Avatar" class="add-story-avatar">
+          <div class="add-story-icon"></div>
+          <span class="add-story-label">Tạo tin</span>
+        </div>
+      </div>
+      <div class="story-item" *ngFor="let story of stories" (click)="openStoryViewer(story)">
+        <img [src]="story.imageUrl" alt="Story" class="story-image">
+        <div class="story-gradient"></div>
+        <div class="story-overlay">
+          <img [src]="story.user.avatarUrl || getAvatarUrl(story.user._id)" alt="Avatar" class="story-avatar">
+          <span class="story-user-name">{{ story.user.firstName }} {{ story.user.lastName }}</span>
+        </div>
+        <div class="story-status-text" *ngIf="story.statusText">
+          {{ story.statusText }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Post Create Card -->
+  <div class="post-create-card">
+    <div class="post-create-header">
+      <img [src]="getAvatarUrl(currentUser?._id)" alt="Avatar" class="post-create-avatar">
+      <div class="post-create-input" (click)="openCreatePostModal()">
+        Bạn đang nghĩ gì?
+      </div>
+    </div>
+    <div class="post-create-options">
+      <button class="post-create-option live" (click)="openCreateLiveModal()">
+        <i class="fa fa-video-camera"></i>
+        <span>Video trực tiếp</span>
+      </button>
+      <button class="post-create-option photo" (click)="openCreatePostModal()">
+        <i class="fa fa-image"></i>
+        <span>Ảnh/Video</span>
+      </button>
+      <button class="post-create-option feeling">
+        <i class="fa fa-smile-o"></i>
+        <span>Cảm xúc/Hoạt động</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Posts List -->
+  <div class="content-section">
+    <div class="section-header">
+      <h3>Bài viết</h3>
+    </div>
+    
+    <div *ngIf="isLoading && posts.length === 0" class="loading">
+      <div class="spinner"></div>
+      <p>Đang tải bài viết...</p>
+    </div>
+    
+    <div *ngIf="!isLoading && posts.length === 0" class="no-posts">
+      <i class="fa fa-file-text-o"></i>
+      <p>Chưa có bài viết nào. Hãy là người đầu tiên đăng bài!</p>
+    </div>
+    
+    <div class="post-list">
+      <div *ngFor="let post of posts" class="post-card">
+        <div class="post-header">
+          <img [src]="getAvatarUrl(post.user?._id)" 
+               alt="User Avatar" 
+               class="avatar"
+               (click)="navigateToProfile(post.user?._id)" />
+          <div class="post-info">
+            <h4 (click)="navigateToProfile(post.user?._id)">
+              {{ post.user?.firstName }} {{ post.user?.lastName }}
+            </h4>
+            <div class="post-meta">
+              <span class="post-time">{{ formatTimeAgo(post.createdAt) }}</span>
+              <span>·</span>
+              <span class="post-privacy">
+                <i class="fa {{ getPrivacyIcon(post.privacy) }}"></i>
+              </span>
+              <span *ngIf="post.emotion !== 'none'" class="post-emotion">
+                {{ getEmotionEmoji(post.emotion) }}
+              </span>
+            </div>
+          </div>
+          
+          <!-- Post Actions Menu (for owner) -->
+          <div *ngIf="isPostOwner(post)" class="post-actions-menu">
+            <button class="dropdown-toggle">
+              <i class="fa fa-ellipsis-v"></i>
+            </button>
+            <div class="dropdown-menu">
+              <button class="dropdown-item" (click)="editPost(post)">
+                <i class="fa fa-edit"></i> Chỉnh sửa bài viết
+              </button>
+              <button class="dropdown-item danger" (click)="deletePost(post._id)">
+                <i class="fa fa-trash"></i> Xóa bài viết
+              </button>
+            </div>
+          </div>
+          
+          <!-- Report Button (for non-owners) -->
+          <div *ngIf="!isPostOwner(post)" class="post-actions-menu">
+            <button class="dropdown-toggle">
+              <i class="fa fa-ellipsis-v"></i>
+            </button>
+            <div class="dropdown-menu">
+              <button class="dropdown-item" (click)="openReportModal(post)">
+                <i class="fa fa-flag"></i> Báo cáo bài viết
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="post-content">
+          <p>{{ post.content }}</p>
+          
+          <!-- Hashtags -->
+          <div *ngIf="post.hashtags && post.hashtags.length > 0" class="hashtags">
+            <span *ngFor="let tag of post.hashtags" class="hashtag">{{ tag }}</span>
+          </div>
+          
+          <!-- Images -->
+          <div *ngIf="post.imageUrls && post.imageUrls.length > 0" 
+               class="post-images"
+               [class.single]="post.imageUrls.length === 1"
+               [class.two]="post.imageUrls.length === 2"
+               [class.three]="post.imageUrls.length === 3"
+               [class.four]="post.imageUrls.length >= 4">
+            <img *ngFor="let imageUrl of post.imageUrls" [src]="imageUrl" alt="Post Image" class="post-image">
+          </div>
+          
+          <!-- Videos -->
+          <div *ngIf="post.videoUrls && post.videoUrls.length > 0" class="post-videos">
+            <video *ngFor="let videoUrl of post.videoUrls" [src]="videoUrl" controls></video>
+          </div>
+        </div>
+        
+        <div class="post-stats">
+          <span class="likes-count">
+            <i class="fa fa-thumbs-up"></i> {{ post.likes?.length || 0 }} lượt thích
+          </span>
+          <span class="comments-count">
+            {{ post.comments?.length || 0 }} bình luận
+          </span>
+        </div>
+        
+        <div class="post-actions">
+          <button class="action-btn" [class.active]="post.likes?.includes(currentUser?._id)" (click)="toggleLike(post)">
+            <i class="fa" [class.fa-thumbs-o-up]="!post.likes?.includes(currentUser?._id)" [class.fa-thumbs-up]="post.likes?.includes(currentUser?._id)"></i>
+            Thích
+          </button>
+          <button class="action-btn" (click)="post.showComments = !post.showComments">
+            <i class="fa fa-comment-o"></i> Bình luận
+          </button>
+          <button class="action-btn">
+            <i class="fa fa-share"></i> Chia sẻ
+          </button>
+        </div>
+        
+        <!-- Comments Section -->
+        <div *ngIf="post.showComments" class="comments-section">
+          <div class="comments-list">
+            <div *ngFor="let comment of post.comments" class="comment">
+              <img [src]="getAvatarUrl(comment.user._id)" 
+                   alt="Commenter" 
+                   class="comment-avatar"
+                   (click)="navigateToProfile(comment.user._id)" />
+              <div class="comment-content">
+                <div class="comment-header">
+                  <span (click)="navigateToProfile(comment.user._id)" class="commenter-name">
+                    {{ comment.user.firstName }} {{ comment.user.lastName }}
+                  </span>
+                  <span class="comment-time">{{ formatTimeAgo(comment.createdAt) }}</span>
+                </div>
+                <p class="comment-text">{{ comment.text }}</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Add Comment Form -->
+          <div class="add-comment">
+            <img [src]="getAvatarUrl(currentUser?._id)" alt="Your Avatar" class="add-comment-avatar">
+            <input 
+              #commentInput 
+              type="text" 
+              placeholder="Viết bình luận..." 
+              class="comment-input"
+            >
+            <button class="comment-btn" (click)="addComment(post, commentInput.value); commentInput.value = ''">
+              <i class="fa fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Load More Button -->
+    <div *ngIf="posts.length > 0 && posts.length < totalPosts" class="load-more">
+      <button class="btn-load-more" (click)="loadMorePosts()" [disabled]="isLoading">
+        <span *ngIf="isLoading" class="spinner-small"></span>
+        <span *ngIf="!isLoading">Xem thêm bài viết</span>
+      </button>
+    </div>
+    
+    <!-- Bottom Loading Indicator -->
+    <div *ngIf="isLoading && posts.length > 0" class="loading-more">
+      <div class="spinner"></div>
+      <p>Đang tải thêm bài viết...</p>
+    </div>
+  </div>
+</div>
+
+<!-- Create Live Stream Modal -->
+<div class="create-live-overlay" *ngIf="showCreateLiveModal" (click)="closeCreateLiveModal()">
+  <div class="create-live-modal" (click)="$event.stopPropagation()">
+    <div class="create-live-header">
+      <h3>Tạo Video trực tiếp</h3>
+      <button class="create-live-close" (click)="closeCreateLiveModal()">
+        <i class="fa fa-times"></i>
+      </button>
+    </div>
+    <div class="create-live-body">
+      <div class="live-preview-area">
+        <i class="fa fa-video-camera"></i>
+        <p>Buổi live sẽ được phát trực tiếp</p>
+      </div>
+      <div class="live-form-group">
+        <label>Tiêu đề buổi live</label>
+        <input
+          type="text"
+          [(ngModel)]="liveTitle"
+          placeholder="Nhập tiêu đề..."
+          class="form-control"
+          maxlength="200"
+        >
+      </div>
+      <div class="live-form-group">
+        <label>Mô tả (tùy chọn)</label>
+        <textarea
+          [(ngModel)]="liveDescription"
+          placeholder="Mô tả về buổi live của bạn..."
+          class="form-control"
+          rows="3"
+          maxlength="500"
+        ></textarea>
+      </div>
+      <div class="live-info-box">
+        <i class="fa fa-info-circle"></i>
+        <p>Buổi live sẽ được thông báo đến tất cả bạn bè của bạn và hiển thị trên trang chủ.</p>
+      </div>
+    </div>
+    <div class="create-live-footer">
+      <button class="btn-cancel" (click)="closeCreateLiveModal()">Hủy</button>
+      <button class="btn-submit" (click)="startLiveStream()" [disabled]="!liveTitle.trim() || isStartingStream">
+        <i class="fa fa-broadcast-tower"></i>
+        <span *ngIf="!isStartingStream">Bắt đầu Live</span>
+        <span *ngIf="isStartingStream">Đang bắt đầu...</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Stream Viewer Modal -->
+<div class="stream-viewer-overlay" *ngIf="showStreamViewer && viewingStream" (click)="closeStreamViewer()">
+  <div class="stream-viewer-container" (click)="$event.stopPropagation()">
+    <!-- Stream Header -->
+    <div class="stream-viewer-header">
+      <div class="stream-viewer-user">
+        <img [src]="viewingStream.broadcaster?.avatarUrl || getAvatarUrl(viewingStream.broadcaster?._id)" alt="Avatar" class="stream-viewer-avatar">
+        <div class="stream-viewer-user-info">
+          <span class="stream-viewer-user-name">{{ viewingStream.broadcaster?.firstName }} {{ viewingStream.broadcaster?.lastName }}</span>
+          <div class="stream-meta">
+            <span class="stream-live-badge">
+              <i class="fa fa-circle"></i> LIVE
+            </span>
+            <span class="stream-viewer-count">
+              <i class="fa fa-eye"></i> {{ streamViewerCount }}
+            </span>
+          </div>
+        </div>
+      </div>
+      <button class="stream-viewer-close" (click)="closeStreamViewer()">
+        <i class="fa fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Stream Video Area -->
+    <div class="stream-viewer-body">
+      <div class="stream-video-placeholder">
+        <div class="stream-placeholder-content">
+          <i class="fa fa-broadcast-tower"></i>
+          <h4>{{ viewingStream.title }}</h4>
+          <p>{{ viewingStream.description }}</p>
+          <div class="stream-placeholder-note">
+            <i class="fa fa-info-circle"></i>
+            <span>Video đang được phát trực tiếp</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stream Chat -->
+    <div class="stream-chat-section">
+      <div class="stream-chat-messages" #chatContainer>
+        <div *ngFor="let msg of streamChatMessages" class="chat-message" [class.broadcaster]="msg.isBroadcaster">
+          <img [src]="getAvatarUrl(msg.userId)" alt="Avatar" class="chat-avatar">
+          <div class="chat-content">
+            <span class="chat-user-name">{{ msg.userName }}<span *ngIf="msg.isBroadcaster" class="chat-broadcaster-badge">Host</span></span>
+            <span class="chat-text">{{ msg.message }}</span>
+          </div>
+        </div>
+        <div *ngIf="streamChatMessages.length === 0" class="chat-empty">
+          Chưa có tin nhắn nào. Hãy là người đầu tiên chat!
+        </div>
+      </div>
+      <div class="stream-chat-input">
+        <input
+          type="text"
+          [(ngModel)]="streamChatInput"
+          placeholder="Gửi tin nhắn..."
+          (keyup.enter)="sendStreamChat()"
+        >
+        <button (click)="sendStreamChat()">
+          <i class="fa fa-paper-plane"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Broadcaster Controls -->
+    <div class="stream-broadcaster-controls" *ngIf="isBroadcaster(viewingStream)">
+      <button class="end-stream-btn" (click)="endLiveStream()">
+        <i class="fa fa-stop-circle"></i>
+        Kết thúc Live
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Story Viewer Modal -->
+<div class="story-viewer-overlay" *ngIf="showStoryViewer && viewingStory" (click)="closeStoryViewer()">
+  <div class="story-viewer-container" (click)="$event.stopPropagation()">
+    <div class="story-viewer-header">
+      <div class="story-viewer-user">
+        <img [src]="viewingStory.user.avatarUrl || getAvatarUrl(viewingStory.user._id)" alt="Avatar" class="story-viewer-avatar">
+        <div class="story-viewer-user-info">
+          <span class="story-viewer-user-name">{{ viewingStory.user.firstName }} {{ viewingStory.user.lastName }}</span>
+          <span class="story-viewer-time">{{ formatTimeAgo(viewingStory.createdAt) }}</span>
+        </div>
+      </div>
+      <button class="story-viewer-close" (click)="closeStoryViewer()">
+        <i class="fa fa-times"></i>
+      </button>
+    </div>
+    <div class="story-viewer-body">
+      <img [src]="viewingStory.imageUrl" alt="Story" class="story-viewer-image">
+      <div class="story-viewer-gradient"></div>
+      <div class="story-viewer-status" *ngIf="viewingStory.statusText">
+        <p>{{ viewingStory.statusText }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Story Modal -->
+<div class="story-modal-overlay" *ngIf="showStoryModal" (click)="closeStoryModal()">
+  <div class="story-modal" (click)="$event.stopPropagation()">
+    <div class="story-modal-header">
+      <h3>Tạo tin</h3>
+      <button class="story-close-btn" (click)="closeStoryModal()">
+        <i class="fa fa-times"></i>
+      </button>
+    </div>
+    <div class="story-modal-body">
+      <div class="story-upload-area" *ngIf="!storyPreview">
+        <label for="story-file-input" class="story-upload-label">
+          <i class="fa fa-image"></i>
+          <span>Thêm ảnh vào tin của bạn</span>
+          <span class="upload-hint">Nhấp để chọn ảnh từ thiết bị</span>
+        </label>
+        <input
+          type="file"
+          id="story-file-input"
+          accept="image/*"
+          (change)="onStoryFileChange($event)"
+          style="display: none;"
+        >
+      </div>
+
+      <div class="story-preview-area" *ngIf="storyPreview">
+        <img [src]="storyPreview" alt="Story Preview" class="story-preview-image">
+        <button class="change-story-btn" (click)="storyFile = null; storyPreview = ''">
+          <i class="fa fa-exchange"></i> Thay đổi ảnh
+        </button>
+      </div>
+
+      <div class="story-status-input" *ngIf="storyPreview">
+        <textarea
+          [(ngModel)]="storyStatusText"
+          placeholder="Viết gì đó về ảnh này..."
+          rows="3"
+          class="form-control"
+        ></textarea>
+      </div>
+    </div>
+    <div class="story-modal-footer">
+      <button class="btn-cancel" (click)="closeStoryModal()">Hủy</button>
+      <button class="btn-submit" (click)="createStory()" [disabled]="!storyFile || isCreatingStory">
+        <span *ngIf="isCreatingStory">Đang đăng...</span>
+        <span *ngIf="!isCreatingStory">Đăng tin</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Create Post Modal -->
+<div class="modal" [class.show]="showCreatePostModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Tạo bài viết</h5>
+        <button type="button" class="close" (click)="closeCreatePostModal()">
+          <span>&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="postForm" (ngSubmit)="submitPost()">
+          <div class="form-group">
+            <textarea 
+              formControlName="content" 
+              placeholder="Bạn đang nghĩ gì?" 
+              rows="4"
+              class="form-control"
+            ></textarea>
+          </div>
+          
+          <div class="form-group">
+            <input 
+              type="text" 
+              formControlName="hashtags" 
+              placeholder="Hashtags (ngăn cách bằng dấu phẩy)" 
+              class="form-control"
+            >
+          </div>
+          
+          <div class="post-options">
+            <div class="option-group">
+              <label>Cảm xúc</label>
+              <select formControlName="emotion" class="form-control">
+                <option *ngFor="let emotion of emotions" [value]="emotion.value">{{ emotion.label }}</option>
+              </select>
+            </div>
+            
+            <div class="option-group">
+              <label>Quyền riêng tư</label>
+              <select formControlName="privacy" class="form-control">
+                <option *ngFor="let option of privacyOptions" [value]="option.value">
+                  {{ option.label }}
+                </option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="media-upload">
+            <label for="media-files" class="btn-upload">
+              <i class="fa fa-image"></i> Thêm ảnh/video
+            </label>
+            <input 
+              type="file" 
+              id="media-files" 
+              multiple 
+              accept="image/*,video/*" 
+              (change)="onFileChange($event)" 
+              style="display: none;"
+            >
+          </div>
+          
+          <div *ngIf="previewImages.length > 0" class="media-preview">
+            <div *ngFor="let preview of previewImages; let i = index" class="preview-item">
+              <img [src]="preview" alt="Preview">
+              <button type="button" class="remove-btn" (click)="removeFile(i)">
+                <i class="fa fa-times"></i>
+              </button>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button type="button" class="btn-cancel" (click)="closeCreatePostModal()">Hủy</button>
+            <button type="submit" class="btn-submit" [disabled]="postForm.invalid || isLoading">
+              {{ editingPost ? 'Cập nhật' : 'Đăng' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Post Modal -->
+<div class="modal" [class.show]="isEditingPostModal" *ngIf="editingPost">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Chỉnh sửa bài viết</h5>
+        <button type="button" class="close" (click)="cancelEditPost()">
+          <span>&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <form [formGroup]="editPostForm" (ngSubmit)="updatePost()">
+          <div class="form-group">
+            <textarea formControlName="content" class="form-control" rows="4" placeholder="Nội dung bài viết..."></textarea>
+          </div>
+          <div class="form-group">
+            <label>Cảm xúc</label>
+            <select formControlName="emotion" class="form-control">
+              <option *ngFor="let emotion of emotions" [value]="emotion.value">{{ emotion.label }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Quyền riêng tư</label>
+            <select formControlName="privacy" class="form-control">
+              <option *ngFor="let option of privacyOptions" [value]="option.value">{{ option.label }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Hashtags (phân cách bằng dấu phẩy)</label>
+            <input type="text" formControlName="hashtags" class="form-control" placeholder="hashtag1, hashtag2, ...">
+          </div>
+          
+          <div class="form-group">
+            <label>Thêm ảnh/video mới</label>
+            <div class="media-upload">
+              <label for="edit-media-files" class="btn-upload">
+                <i class="fa fa-image"></i> Chọn ảnh/video
+              </label>
+              <input 
+                type="file" 
+                id="edit-media-files" 
+                multiple 
+                accept="image/*,video/*" 
+                (change)="onEditFileChange($event)" 
+                style="display: none;"
+              >
+            </div>
+          </div>
+          
+          <div *ngIf="editPreviewImages.length > 0" class="media-preview">
+            <div *ngFor="let preview of editPreviewImages; let i = index" class="preview-item">
+              <img [src]="preview" alt="Preview">
+              <button type="button" class="remove-btn" (click)="removeEditFile(i)">
+                <i class="fa fa-times"></i>
+              </button>
+            </div>
+          </div>
+          
+          <ng-container *ngIf="editingPost">
+            <ng-container *ngIf="editingPost.imageUrls && editingPost.imageUrls.length > 0">
+              <div class="existing-media">
+                <label>Ảnh hiện tại</label>
+                <div class="media-preview">
+                  <div *ngFor="let image of editingPost.imageUrls; let i = index" class="preview-item">
+                    <img [src]="image" alt="Existing image">
+                    <button type="button" class="remove-btn" (click)="removeExistingImage(i)">
+                      <i class="fa fa-times"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+
+            <ng-container *ngIf="editingPost.videoUrls && editingPost.videoUrls.length > 0">
+              <div class="existing-media">
+                <label>Video hiện tại</label>
+                <div class="media-preview">
+                  <div *ngFor="let video of editingPost.videoUrls; let i = index" class="preview-item">
+                    <video [src]="video" controls></video>
+                    <button type="button" class="remove-btn" (click)="removeExistingVideo(i)">
+                      <i class="fa fa-times"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+          </ng-container>
+          
+          <div class="form-actions">
+            <button type="button" class="btn-cancel" (click)="cancelEditPost()">Hủy</button>
+            <button type="submit" class="btn-submit" [disabled]="editPostForm.invalid">Lưu</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Report Modal -->
+<div class="modal-overlay" *ngIf="showReportModal" (click)="cancelReport()">
+  <div class="report-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h4>Báo cáo bài viết</h4>
+      <button class="close-btn" (click)="cancelReport()">
+        <i class="fa fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p>Hãy chọn lý do báo cáo bài viết này:</p>
+      <form [formGroup]="reportForm" (ngSubmit)="submitReport()">
+        <div class="form-group">
+          <label for="violationType">Loại vi phạm:</label>
+          <select id="violationType" formControlName="violationType" class="form-control">
+            <option value="">Chọn lý do báo cáo</option>
+            <option value="inappropriate_content">Nội dung không phù hợp</option>
+            <option value="hate_speech">Phát ngôn thù ghét</option>
+            <option value="harassment">Quấy rối</option>
+            <option value="violence">Bạo lực</option>
+            <option value="spam">Spam</option>
+            <option value="false_information">Thông tin sai lệch</option>
+            <option value="intellectual_property">Vi phạm quyền sở hữu trí tuệ</option>
+            <option value="illegal_activity">Hoạt động trái pháp luật</option>
+            <option value="other">Khác</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="additionalDetails">Chi tiết bổ sung:</label>
+          <textarea 
+            id="additionalDetails" 
+            formControlName="additionalDetails" 
+            placeholder="Cung cấp thêm thông tin về vấn đề này..." 
+            rows="4"
+            class="form-control"
+          ></textarea>
+        </div>
+        
+        <div class="form-actions">
+          <button 
+            type="submit" 
+            class="btn-submit" 
+            [disabled]="reportForm.invalid || isSubmittingReport"
+          >
+            {{ isSubmittingReport ? 'Đang gửi...' : 'Gửi báo cáo' }}
+          </button>
+          <button type="button" class="btn-cancel" (click)="cancelReport()">
+            Hủy
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
